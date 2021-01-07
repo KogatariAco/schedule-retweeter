@@ -1,0 +1,12 @@
+{
+  "name": "schedule-retweeter",
+  "private": true,
+  "scripts": {
+    "prepare": "lerna bootstrap",
+    "build": "lerna run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "lerna": "^3.22.1"
+  }
+}
