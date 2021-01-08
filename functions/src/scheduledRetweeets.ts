@@ -1,4 +1,3 @@
-import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 import { SecretManagerServiceClient, v1 } from "@google-cloud/secret-manager";
 import Twitter from "twitter-lite";
@@ -6,7 +5,7 @@ import setSeconds from "date-fns/setSeconds";
 import setMilliseconds from "date-fns/setMilliseconds";
 import setMinutes from "date-fns/setMinutes";
 import { region, timeZone } from "./constants";
-import { Tweet } from "./domain";
+import { select } from "./database";
 
 const accessSecret = async (
   client: v1.SecretManagerServiceClient,
@@ -59,24 +58,6 @@ const initTwitterClient = async (): Promise<Twitter> => {
   })
 };
 
-const selectTweets = async (
-  start: Date,
-  end: Date
-): Promise<Tweet[]> => {
-  const snapshot = await admin.firestore().collection("tweets")
-    .orderBy("tweetAt", "asc")
-    .startAt(start)
-    .endAt(end)
-    .get();
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      tweetAt: (data.startAt as FirebaseFirestore.Timestamp).toDate(),
-    };
-  });
-};
-
 export const scheduledRetweeets = functions.region(region).pubsub
   .schedule("every 30 minutes")
   .timeZone(timeZone)
@@ -87,9 +68,11 @@ export const scheduledRetweeets = functions.region(region).pubsub
       0
     );
     const end = setMinutes(start, 29);
-    const tweets = await selectTweets(start, end);
+    const tweets = await select(start, end);
     // TODO: rate limitを考慮する
     await Promise.all(
       tweets.map((tweet) => twitter.post(`statuses/retweet/${tweet.id}`, {}))
     );
   });
+
+export default scheduledRetweeets;
